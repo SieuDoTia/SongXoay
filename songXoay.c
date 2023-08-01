@@ -34,6 +34,112 @@ void tinhAnh( float *mangKetQua, unsigned short beRongAnh, unsigned short beCaoA
 void mauCuaGiaTriFloat( float giaTri, float *mau );
 
 
+void tinhAnhLanSong( float *mangKetQua, unsigned int beRongAnh, unsigned int beCaoAnh, unsigned char hatNgauNhien ) {
+
+   // ==== tạo mảng xoáy
+   srand( hatNgauNhien );
+   Xoay mangXoay[10];
+   unsigned char soLuongXoay = rand() & 0x7;
+   
+   unsigned char chiSoXoay = 0;
+   while( chiSoXoay < soLuongXoay ) {
+      
+      // ---- vị trí [x: -1.5 ... 1.5   y: -1.5 ... 1.5]
+      short ngauNhien = (rand() & 0xfff) - 2048;
+      mangXoay[chiSoXoay].x = 1.5f*((float)ngauNhien/2048.0f);
+      ngauNhien = (rand() & 0xfff) - 2048;
+      mangXoay[chiSoXoay].y = 1.5f*((float)ngauNhien/2048.0f);
+      
+      // ---- sức [0.0 ... 1.0]
+      ngauNhien = rand() & 0xfff;
+      mangXoay[chiSoXoay].suc = (float)ngauNhien/4096.0f;
+      
+      // ---- tần số [10 ... 100]
+      ngauNhien = rand() & 0xfff;
+      mangXoay[chiSoXoay].tanSo = 10.0f + 90.0f*((float)ngauNhien/4096.0f);
+      
+      // ---- giảm [1.0 ... 4.0]
+      ngauNhien = rand() & 0xfff;
+      mangXoay[chiSoXoay].giam = 0.05f + 0.5f*((float)ngauNhien/4096.0f);
+      
+      printf( "%d (%5.3f; %5.3f) suc %5.3f  tanSo %5.3f\n", chiSoXoay, mangXoay[chiSoXoay].x, mangXoay[chiSoXoay].y, mangXoay[chiSoXoay].suc, mangXoay[chiSoXoay].tanSo );
+      chiSoXoay++;
+   }
+
+   float buoc = 2.0f/(float)beCaoAnh;
+   float nuaBeCaoAnh = (float)(beCaoAnh >> 1);
+   float y = -1.0f;
+   
+   // ---- chia số lượng xoáy
+   float phongToXoay = 1.0f/(float)soLuongXoay;
+   
+   unsigned short hangAnh = 0;
+   unsigned int diaChi = 0;
+   
+   /*
+    • Giữ góc được tính trong phạm vi 0 đến 2π
+    • Xong đơn vị hóa bời 2π cho 'đơn vị hóa' góc cho tô màu
+    */
+   
+   while( hangAnh < beCaoAnh ) {
+      float x = -(float)(beRongAnh >> 1)/nuaBeCaoAnh;
+      
+      printf( "  Hàng ảnh: %d/%d\n", hangAnh, beCaoAnh );
+      unsigned short cotAnh = 0;
+      
+      while( cotAnh < beRongAnh ) {
+
+         unsigned char chiSoXoay = 0;
+         float ketQua = 0.0f;
+         while( chiSoXoay < soLuongXoay ) {
+            // ---- cách bình
+            float cachX = x - mangXoay[chiSoXoay].x;
+            float cachY = y - mangXoay[chiSoXoay].y;
+            float banKinh = sqrtf( cachX*cachX + cachY*cachY );
+            
+            float goc = 0.0f;
+            if( cachX != 0.0f )
+               goc = atanf( cachY/cachX );
+            
+            float suc = mangXoay[chiSoXoay].suc;
+            float tanSo = mangXoay[chiSoXoay].tanSo;
+            float giam = mangXoay[chiSoXoay].giam;
+            
+            // ---- hạn chế phạm vi góc 0 ≤ góc ≤ 2π
+            if( cachX < 0.0 )
+               goc = 3.1415927f + goc;
+            else {
+               if( cachY < 0.0f)
+                  goc += 6.2831853f;
+            }
+            
+            goc += suc*phongToXoay * sinf( banKinh*tanSo )* expf(-banKinh*giam);
+            
+            // ---- hạn chế phạm vi góc 0 ≤ góc ≤ 2π
+            if( goc < 0.0f )
+               goc += 6.2831853f;
+            else if( goc > 6.2831853f )
+               goc -= 6.2831853f;
+            
+            
+            ketQua += goc;
+            chiSoXoay++;
+         }
+         
+         // ---- đơn vị hóa 'góc kết qủa'
+         mangKetQua[diaChi] = ketQua/6.2831853f;
+         
+         diaChi++;
+         cotAnh++;
+         x += buoc;
+      }
+      
+      hangAnh++;
+      y += buoc;
+   }
+}
+
+
 
 int main( int argc, char **argv ) {
    
@@ -59,7 +165,7 @@ int main( int argc, char **argv ) {
    else {
       printf( "Lệnh Ví Dụ: <bềRộngẢnh> <bềCaoẢnh> <sốHạt> <sốLượngHoạtHình> <sốTậpHợpMàu> <sốLặpLạiMàu>\n" );
       printf( "    Ví Dụ:./SongXoay 4096 2160 3 24 5 1\n" );
-      printf( "          ./songXoay 1024 512 45 2 8 1\n" );
+      printf( "          ./songXoay 1024 512 45 2 11 1\n" );
       exit(0);
    }
    
@@ -103,7 +209,6 @@ int main( int argc, char **argv ) {
    printf( " Số hoạt hình: %d\n", hoatHinhToiDa );
    printf( " Số tập hợp màu: %d\n", soTapMau );
    printf( " Số lần lặp màu: %d\n", soLapLaiMau );
-   
 
    // ---- mảng chứa kết qủa
    float *mangKetQua = malloc( beRongAnh*beCaoAnh*sizeof( float ) );
@@ -117,111 +222,12 @@ int main( int argc, char **argv ) {
          mangKetQua[diaChi] = 0.0f;
          diaChi++;
       }
-      
-      // ==== tạo mảng xoáy
-      srand( hatNgauNhien );
-      Xoay mangXoay[10];
-      unsigned char soLuongXoay = rand() & 0x7;
-      
-      unsigned char chiSoXoay = 0;
-      while( chiSoXoay < soLuongXoay ) {
-      
-         // ---- vị trí [x: -1.5 ... 1.5   y: -1.5 ... 1.5]
-         short ngauNhien = (rand() & 0xfff) - 2048;
-         mangXoay[chiSoXoay].x = 1.5f*((float)ngauNhien/2048.0f);
-         ngauNhien = (rand() & 0xfff) - 2048;
-         mangXoay[chiSoXoay].y = 1.5f*((float)ngauNhien/2048.0f);
-         
-         // ---- sức [0.0 ... 1.0]
-         ngauNhien = rand() & 0xfff;
-         mangXoay[chiSoXoay].suc = (float)ngauNhien/4096.0f;
-         
-         // ---- tần số [10 ... 100]
-         ngauNhien = rand() & 0xfff;
-         mangXoay[chiSoXoay].tanSo = 10.0f + 90.0f*((float)ngauNhien/4096.0f);
-         
-         // ---- giảm [1.0 ... 4.0]
-         ngauNhien = rand() & 0xfff;
-         mangXoay[chiSoXoay].giam = 0.05f + 0.5f*((float)ngauNhien/4096.0f);
-   
-         printf( "%d (%5.3f; %5.3f) suc %5.3f  tanSo %5.3f\n", chiSoXoay, mangXoay[chiSoXoay].x, mangXoay[chiSoXoay].y, mangXoay[chiSoXoay].suc, mangXoay[chiSoXoay].tanSo );
-         chiSoXoay++;
-      }
 
-      // ==== quét qua ảnh
-      float buoc = 2.0f/(float)beCaoAnh;
-      float nuaBeCaoAnh = (float)(beCaoAnh >> 1);
-      float y = -1.0f;
-      
-      // ---- chia số lượng xoáy
-      float phongToXoay = 1.0f/(float)soLuongXoay;
+      // ==== quét qua phạm vi ảnh vã tính kết ảnh trước
+      tinhAnhLanSong( mangKetQua, beRongAnh, beCaoAnh, hatNgauNhien );
 
-      unsigned short hangAnh = 0;
-      diaChi = 0;
-      
-      /*
-      • Giữ góc được tính trong phạm vi 0 đến 2π
-      • Xong đơn vị hóa bời 2π cho 'đơn vị hóa' góc cho tô màu
-      */
-
-      while( hangAnh < beCaoAnh ) {
-         float x = -(float)(beRongAnh >> 1)/nuaBeCaoAnh;
-
-         printf( "  Hàng ảnh: %d/%d\n", hangAnh, beCaoAnh );
-         unsigned short cotAnh = 0;
-         
-         while( cotAnh < beRongAnh ) {
-            
-            unsigned char chiSoXoay = 0;
-            float ketQua = 0.0f;
-            while( chiSoXoay < soLuongXoay ) {
-               // ---- cách bình
-               float cachX = x - mangXoay[chiSoXoay].x;
-               float cachY = y - mangXoay[chiSoXoay].y;
-               float banKinh = sqrtf( cachX*cachX + cachY*cachY );
-               
-               float goc = 0.0f;
-               if( cachX != 0.0f )
-                  goc = atanf( cachY/cachX );
-
-               float suc = mangXoay[chiSoXoay].suc;
-               float tanSo = mangXoay[chiSoXoay].tanSo;
-               float giam = mangXoay[chiSoXoay].giam;
-               
-               // ---- hạn chế phạm vi góc 0 ≤ góc ≤ 2π
-               if( cachX < 0.0 )
-                  goc = 3.1415927f + goc;
-               else {
-                  if( cachY < 0.0f)
-                     goc += 6.2831853f;
-               }
-               
-               goc += suc*phongToXoay * sinf( banKinh*tanSo )* expf(-banKinh*giam);
-               
-               // ---- hạn chế phạm vi góc 0 ≤ góc ≤ 2π
-               if( goc < 0.0f )
-                  goc += 6.2831853f;
-               else if( goc > 6.2831853f )
-                  goc -= 6.2831853f;
-               
-
-               ketQua += goc;
-               chiSoXoay++;
-            }
-            
-            // ---- đơn vị hóa 'góc kết qủa'
-            mangKetQua[diaChi] = ketQua/6.2831853f;
-
-            diaChi++;
-            cotAnh++;
-            x += buoc;
-         }
-
-         hangAnh++;
-         y += buoc;
-      }
 //      exit(0);
-      // ==== vẽ ảnh
+      // ==== tô ảnh từ kết qủa
       unsigned char *anh = malloc( beRongAnh*beCaoAnh << 2 );
       if( anh ) {
 
@@ -292,7 +298,7 @@ int main( int argc, char **argv ) {
             // ==== Lưu Ảnh
             char tenTep[255];
             sprintf( tenTep, "SongXoay_%04d.png", soHoatHinh );
-            luuAnhPNG_BGRO( tenTep, anh, beRongAnh, beCaoAnh );
+            luuAnhPNG( tenTep, anh, beRongAnh, beCaoAnh, kPNG_BGRO );
             printf( "Dã lưu tệp: %s\n", tenTep );
 
             // ---- ảnh kế tiếp
