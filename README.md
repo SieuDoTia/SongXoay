@@ -7,4 +7,4 @@ Cho làm hoạt hình làn sóng. Gõ 'make' sau tải nó xuống.
 
 ![alt tag](SongXoay_0022.png)
 
-./songXoay 1024 512
+./songXoay 1024 512 3 24 5 1
